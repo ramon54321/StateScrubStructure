@@ -1,0 +1,12 @@
+[package]
+name = "rust_simple"
+version = "0.1.0"
+authors = ["Ramon Brand <ramon2009@gmail.com>"]
+
+[dependencies]
+log = "0.4"
+simple_logger = "0.5"
+
+[[bin]]
+name = "rust_simple"
+path = "src/main.rs"
