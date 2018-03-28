@@ -52,7 +52,15 @@ mod state {
                 None => ()
             }
         }
+        pub fn get_at(self : &Self, graph_label : GraphLabel, t : u64) -> Option<f64> {
+            let graph = self.graphs.get(&graph_label);
+            match graph {
+                Some(g) => g.get_at(t),
+                None => None
+            }
+        }
         pub fn print(self : &Self) {
+            debug!("Entity {}.", self.id);
             for (label, graph) in &self.graphs {
                 graph.print();
             }
@@ -77,11 +85,34 @@ mod state {
             debug!("Adding value {} at time {}.", v, t);
             self.keys.insert(t, v);
         }
+        pub(in state) fn get_at(self : &Self, t : u64) -> Option<f64> {
+            use std::collections::Bound::Included;
+            use std::collections::Bound::Excluded;
+            use std::collections::Bound::Unbounded;
+            let key_left = self.keys.range((Unbounded, (Excluded(t)))).next_back();
+            let key_right = self.keys.range((Included(t), Unbounded)).next();
+            let keys = (key_left, key_right);
+            match keys {
+                (Some((key_l, value_l)), Some((key_r, value_r))) => {
+                    return Some(interpolate::between(*key_l, *value_l, *key_r, *value_r, t));
+                },
+                _ => return None,
+            }
+        }
         pub fn print(self : &Self) {
             for (key, value) in &self.keys {
-                debug!("[ {} , {} ]", key, value);
+                debug!("Key [{},{}]", key, value);
             }
-            //print!("[ {} , {} ]", );
+        }
+    }
+
+
+    /*
+        Interpolations
+    */
+    mod interpolate {
+        pub fn between(x0 : u64, y0 : f64, x1 : u64, y1 : f64, t : u64) -> f64 {
+            return y0 + (t - x0) as f64 * ((y1 - y0) / (x1 - x0) as f64);
         }
     }
 }
@@ -102,16 +133,15 @@ fn main() {
     state::Entity::new(&mut state);
 
     {
-        let entity = state.entities.get_mut(&0u16);
-        match entity {
-            Some(e) => {
-                    e.add_graph(state::GraphLabel::PositionX);
-                    e.add_key(state::GraphLabel::PositionX, 4, 10f64);
-                },
-            None => ()
-        }
+        let entity = state.entities.get_mut(&0u16).unwrap();
+        entity.add_graph(state::GraphLabel::PositionX);
+        entity.add_key(state::GraphLabel::PositionX, 8, 10f64);
+        entity.add_key(state::GraphLabel::PositionX, 7, 10f64);
+        entity.add_key(state::GraphLabel::PositionX, 10, 10f64);
+        entity.add_key(state::GraphLabel::PositionX, 2, 10f64);
+        entity.add_key(state::GraphLabel::PositionX, 6, 10f64);
+        entity.add_key(state::GraphLabel::PositionX, 16, 20f64);
+        entity.add_key(state::GraphLabel::PositionX, 44, 10f64);
+        println!("Value at t=13 : {:?}", entity.get_at(state::GraphLabel::PositionX, 13));
     }
-
-    state.print();
-
 }
